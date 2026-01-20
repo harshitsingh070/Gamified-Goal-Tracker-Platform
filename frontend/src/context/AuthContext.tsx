@@ -1,84 +1,99 @@
-import React, {
+import {
   createContext,
   useContext,
-  useState,
   useEffect,
+  useState,
   ReactNode,
 } from 'react';
-import { api, AuthResponse, JwtPayload } from '../services/api';
-import { jwtDecode } from 'jwt-decode';
+import { api, AuthResponse } from '../services/api';
 
-interface AuthUser {
+interface User {
   email: string;
   role: 'USER' | 'ADMIN';
 }
 
 interface AuthContextType {
-  user: AuthUser | null;
+  user: User | null;
   token: string | null;
   isAuthenticated: boolean;
   isLoading: boolean;
   login: (email: string, password: string) => Promise<void>;
   register: (email: string, password: string) => Promise<void>;
-  logout: () => void;
+  logout: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
-  const [user, setUser] = useState<AuthUser | null>(null);
+  const [user, setUser] = useState<User | null>(null);
   const [token, setToken] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
+  // 🔄 Restore session
   useEffect(() => {
-    setIsLoading(false);
+    const restore = async () => {
+      try {
+        const res = await api.post<AuthResponse>('/auth/refresh');
+        setToken(res.data.accessToken);
+        setUser({ email: res.data.email, role: res.data.role });
+        api.defaults.headers.common.Authorization =
+          `Bearer ${res.data.accessToken}`;
+      } catch {
+        setUser(null);
+        setToken(null);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    restore();
   }, []);
 
-  // ---------- LOGIN ----------
   const login = async (email: string, password: string) => {
-    try {
-      const response = await api.post<AuthResponse>('/auth/login', {
-        email,
-        password,
-      });
+    const res = await api.post<AuthResponse>('/auth/login', {
+      email,
+      password,
+    });
 
-      const { accessToken } = response.data;
+    setToken(res.data.accessToken);
+    setUser({ email: res.data.email, role: res.data.role });
 
-      const decoded = jwtDecode<JwtPayload>(accessToken);
-
-      if (!decoded.sub) {
-        throw new Error('Invalid token payload');
-      }
-
-      setToken(accessToken);
-      setUser({
-        email: decoded.sub,
-        role: decoded.role ?? 'USER', // ✅ fallback safety
-      });
-
-      api.defaults.headers.common.Authorization = `Bearer ${accessToken}`;
-    } catch (err) {
-      console.error('Login failed:', err);
-      throw err;
-    }
+    api.defaults.headers.common.Authorization =
+      `Bearer ${res.data.accessToken}`;
   };
 
-  // ---------- REGISTER ----------
   const register = async (email: string, password: string) => {
+    await api.post('/auth/register', { email, password });
+  };
+
+  // 🔥 FIXED LOGOUT
+  const logout = async () => {
+    // 🔥 STEP 1: REMOVE ACCESS TOKEN IMMEDIATELY
+    delete api.defaults.headers.common.Authorization;
+
     try {
-      await api.post('/auth/register', { email, password });
-    } catch (err) {
-      console.error('Registration failed:', err);
-      throw err;
+      // 🔥 STEP 2: CALL LOGOUT WITH NO AUTH HEADER
+      await api.post(
+        '/auth/logout',
+        {},
+        {
+          withCredentials: true,
+          headers: {
+            Authorization: '', // 👈 FORCE EMPTY HEADER
+          },
+        }
+      );
+    } catch (error) {
+      console.log(
+        'Logout backend call failed (likely token expired), clearing UI anyway.'
+      );
+    } finally {
+      // 🔥 STEP 3: ALWAYS CLEAR UI STATE
+      setUser(null);
+      setToken(null);
+      delete api.defaults.headers.common.Authorization;
     }
   };
 
-  // ---------- LOGOUT ----------
-  const logout = () => {
-    setUser(null);
-    setToken(null);
-    delete api.defaults.headers.common.Authorization;
-  };
 
   return (
     <AuthContext.Provider
@@ -97,10 +112,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   );
 };
 
-export const useAuth = (): AuthContextType => {
+export const useAuth = () => {
   const ctx = useContext(AuthContext);
-  if (!ctx) {
-    throw new Error('useAuth must be used inside AuthProvider');
-  }
+  if (!ctx) throw new Error('useAuth must be used inside AuthProvider');
   return ctx;
 };
