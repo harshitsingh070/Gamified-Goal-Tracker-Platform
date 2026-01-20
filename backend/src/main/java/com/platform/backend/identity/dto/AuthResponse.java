@@ -2,18 +2,29 @@ package com.platform.backend.identity.dto;
 
 public class AuthResponse {
 
-    private String token;
+    private String accessToken;
+    private String refreshToken;
     private String email;
     private String role;
 
-    public AuthResponse(String token, String email, String role) {
-        this.token = token;
+    public AuthResponse(
+            String accessToken,
+            String refreshToken,
+            String email,
+            String role
+    ) {
+        this.accessToken = accessToken;
+        this.refreshToken = refreshToken;
         this.email = email;
         this.role = role;
     }
 
-    public String getToken() {
-        return token;
+    public String getAccessToken() {
+        return accessToken;
+    }
+
+    public String getRefreshToken() {
+        return refreshToken;
     }
 
     public String getEmail() {

@@ -2,34 +2,47 @@ import { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate, Link } from 'react-router-dom';
 
-export default function Login() {
-  const { login } = useAuth();
+export default function Register() {
+  const { register } = useAuth();
   const navigate = useNavigate();
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
+  const [success, setSuccess] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
 
+    if (password.length < 8) {
+      setError('Password must be at least 8 characters');
+      return;
+    }
+
     try {
-      await login(email, password);
-      navigate('/dashboard');
+      await register(email, password);
+      setSuccess(true);
+      setTimeout(() => navigate('/login'), 1500);
     } catch {
-      setError('Invalid email or password');
+      setError('Registration failed');
     }
   };
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-100">
       <div className="w-full max-w-md bg-white p-8 rounded-lg shadow">
-        <h2 className="text-2xl font-bold text-center mb-6">Login</h2>
+        <h2 className="text-2xl font-bold text-center mb-6">Register</h2>
 
         {error && (
           <div className="mb-4 text-red-600 text-sm text-center">
             {error}
+          </div>
+        )}
+
+        {success && (
+          <div className="mb-4 text-green-600 text-sm text-center">
+            Registration successful! Redirecting…
           </div>
         )}
 
@@ -54,16 +67,17 @@ export default function Login() {
 
           <button
             type="submit"
-            className="w-full bg-blue-600 text-white py-2 rounded hover:bg-blue-700 transition"
+            disabled={success}
+            className="w-full bg-green-600 text-white py-2 rounded hover:bg-green-700 transition disabled:opacity-50"
           >
-            Sign In
+            Create Account
           </button>
         </form>
 
         <p className="text-sm text-center mt-4">
-          No account?{' '}
-          <Link to="/register" className="text-blue-600 hover:underline">
-            Register
+          Already registered?{' '}
+          <Link to="/login" className="text-blue-600 hover:underline">
+            Login
           </Link>
         </p>
       </div>
