@@ -1,5 +1,6 @@
 package com.platform.backend.goals.service;
 
+import java.util.List;
 import java.util.Objects;
 
 import org.springframework.stereotype.Service;
@@ -56,6 +57,13 @@ public class GoalService {
         goal.setStatus(GoalStatus.ACTIVE);
 
         return goalRepository.save(goal);
+    }
+
+     // =========================
+    // STEP 5 — FETCH USER GOALS
+    // =========================
+    public List<Goal> getUserGoals(Long userId) {
+        return goalRepository.findByUserId(userId);
     }
 
     // =========================
