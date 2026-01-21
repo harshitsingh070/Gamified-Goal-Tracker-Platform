@@ -1,12 +1,8 @@
 import { useState } from "react";
 import { createGoal } from "./goalService";
-import {
-  GoalCategory,
-  GoalDifficulty,
-  GoalVisibility,
-} from "./types";
+import { GoalCategory, GoalDifficulty, GoalVisibility } from "./types";
 
-/* 🔒 MUST MATCH BACKEND ENUM EXACTLY */
+// ✅ EXACT BACKEND MATCH — DO NOT CHANGE
 const categories: GoalCategory[] = [
   "CODING",
   "HEALTH",
@@ -16,7 +12,6 @@ const categories: GoalCategory[] = [
   "CAREER",
   "PERSONAL_GROWTH",
 ];
-
 
 const difficulties: GoalDifficulty[] = ["EASY", "MEDIUM", "HARD"];
 
@@ -32,26 +27,12 @@ export default function CreateGoalForm({ onSuccess }: Props) {
   const [dailyMinimumEffort, setDailyMinimumEffort] = useState(30);
   const [visibility, setVisibility] = useState<GoalVisibility>("PRIVATE");
   const [error, setError] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
 
-    /* 🛑 Basic frontend validation */
-    if (!startDate || !endDate) {
-      setError("Start date and end date are required");
-      return;
-    }
-
-    if (endDate < startDate) {
-      setError("End date cannot be before start date");
-      return;
-    }
-
     try {
-      setLoading(true);
-
       await createGoal({
         category,
         difficulty,
@@ -62,86 +43,81 @@ export default function CreateGoalForm({ onSuccess }: Props) {
       });
 
       alert("Goal created successfully!");
-
-      /* 🔔 Notify parent (Dashboard) */
-      onSuccess?.();
-
-      /* Optional: reset form */
-      setStartDate("");
-      setEndDate("");
-      setDailyMinimumEffort(30);
-      setVisibility("PRIVATE");
-
+      if (onSuccess) onSuccess();
     } catch (err: any) {
       setError(err.response?.data?.message || "Failed to create goal");
-    } finally {
-      setLoading(false);
     }
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4 max-w-md">
-      <h2 className="text-xl font-bold">Create Goal</h2>
+    <form className="space-y-5 bg-white p-6 rounded shadow border" onSubmit={handleSubmit}>
+      <h2 className="text-xl font-bold">Create New Goal</h2>
+      <p className="text-sm text-gray-500">Define what you want to achieve.</p>
 
-      <select
-        value={category}
-        onChange={e => setCategory(e.target.value as GoalCategory)}
-        className="w-full border p-2 rounded"
-      >
-        {categories.map(c => (
-          <option key={c} value={c}>{c}</option>
-        ))}
-      </select>
+      <div>
+        <label className="font-semibold">Category</label>
+        <select className="w-full border p-2 rounded"
+          value={category}
+          onChange={(e) => setCategory(e.target.value as GoalCategory)}
+        >
+          {categories.map(c => <option key={c}>{c}</option>)}
+        </select>
+        <p className="text-xs text-gray-500">Goals are grouped by category for analytics.</p>
+      </div>
 
-      <select
-        value={difficulty}
-        onChange={e => setDifficulty(e.target.value as GoalDifficulty)}
-        className="w-full border p-2 rounded"
-      >
-        {difficulties.map(d => (
-          <option key={d} value={d}>{d}</option>
-        ))}
-      </select>
+      <div>
+        <label className="font-semibold">Difficulty</label>
+        <select className="w-full border p-2 rounded"
+          value={difficulty}
+          onChange={(e) => setDifficulty(e.target.value as GoalDifficulty)}
+        >
+          {difficulties.map(d => <option key={d}>{d}</option>)}
+        </select>
+        <p className="text-xs text-gray-500">Difficulty affects scoring later.</p>
+      </div>
 
-      <input
-        type="date"
-        value={startDate}
-        onChange={e => setStartDate(e.target.value)}
-        className="w-full border p-2 rounded"
-      />
+      <div className="grid grid-cols-2 gap-4">
+        <div>
+          <label className="font-semibold">Start Date</label>
+          <input type="date" className="w-full border p-2 rounded"
+            value={startDate}
+            onChange={(e) => setStartDate(e.target.value)}
+            required
+          />
+        </div>
+        <div>
+          <label className="font-semibold">End Date</label>
+          <input type="date" className="w-full border p-2 rounded"
+            value={endDate}
+            onChange={(e) => setEndDate(e.target.value)}
+            required
+          />
+        </div>
+      </div>
 
-      <input
-        type="date"
-        value={endDate}
-        onChange={e => setEndDate(e.target.value)}
-        className="w-full border p-2 rounded"
-      />
+      <div>
+        <label className="font-semibold">Daily Minimum Effort (minutes)</label>
+        <input type="number" min={1} className="w-full border p-2 rounded"
+          value={dailyMinimumEffort}
+          onChange={(e) => setDailyMinimumEffort(Number(e.target.value))}
+        />
+      </div>
 
-      <input
-        type="number"
-        min={1}
-        value={dailyMinimumEffort}
-        onChange={e => setDailyMinimumEffort(Number(e.target.value))}
-        className="w-full border p-2 rounded"
-      />
+      <div>
+        <label className="font-semibold">Visibility</label>
+        <select className="w-full border p-2 rounded"
+          value={visibility}
+          onChange={(e) => setVisibility(e.target.value as GoalVisibility)}
+        >
+          <option value="PRIVATE">PRIVATE (Only you)</option>
+          <option value="PUBLIC">PUBLIC (Leaderboards later)</option>
+        </select>
+      </div>
 
-      <select
-        value={visibility}
-        onChange={e => setVisibility(e.target.value as GoalVisibility)}
-        className="w-full border p-2 rounded"
-      >
-        <option value="PRIVATE">PRIVATE</option>
-        <option value="PUBLIC">PUBLIC</option>
-      </select>
+      {error && <p className="text-red-600">{error}</p>}
 
-      {error && <p className="text-red-500 text-sm">{error}</p>}
-
-      <button
-        type="submit"
-        disabled={loading}
-        className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded"
-      >
-        {loading ? "Creating..." : "Create Goal"}
+      <button className="w-full bg-blue-600 text-white py-2 rounded">
+        Create Goal
       </button>
     </form>
   );

@@ -7,28 +7,36 @@ export type GoalCategory =
   | "CAREER"
   | "PERSONAL_GROWTH";
 
-
 export type GoalDifficulty = "EASY" | "MEDIUM" | "HARD";
 
 export type GoalVisibility = "PRIVATE" | "PUBLIC";
 
-export interface CreateGoalRequest {
-  category: GoalCategory;
-  difficulty: GoalDifficulty;
-  startDate: string; // YYYY-MM-DD
-  endDate: string;   // YYYY-MM-DD
-  dailyMinimumEffort: number;
-  visibility?: GoalVisibility;
-}
+export type GoalStatus = "ACTIVE" | "COMPLETED" | "ARCHIVED";
 
 export interface Goal {
   id: number;
+  userId: number;
   category: GoalCategory;
   difficulty: GoalDifficulty;
   startDate: string;
   endDate: string;
   dailyMinimumEffort: number;
   visibility: GoalVisibility;
-  status: "ACTIVE" | "COMPLETED" | "ARCHIVED";
+  status: GoalStatus;
   createdAt: string;
+}
+
+export interface CreateGoalRequest {
+  category: GoalCategory;
+  difficulty: GoalDifficulty;
+  startDate: string;
+  endDate: string;
+  dailyMinimumEffort: number;
+  visibility?: GoalVisibility;
+}
+
+export interface UpdateGoalRequest {
+  difficulty?: GoalDifficulty;
+  dailyMinimumEffort?: number;
+  visibility?: GoalVisibility;
 }

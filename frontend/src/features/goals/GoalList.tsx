@@ -1,61 +1,87 @@
 import { useEffect, useState } from "react";
-import { fetchMyGoals } from "./goalService";
+import { getMyGoals, completeGoal, deactivateGoal } from "./goalService";
 import { Goal } from "./types";
-
+import { useAuth } from "../../context/AuthContext";
 
 interface GoalListProps {
   refreshTrigger: number;
 }
 
 export default function GoalList({ refreshTrigger }: GoalListProps) {
+  const { isAuthenticated, isLoading } = useAuth();
   const [goals, setGoals] = useState<Goal[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loadingGoals, setLoadingGoals] = useState(true);
 
   useEffect(() => {
+    if (isLoading || !isAuthenticated) return;
     fetchGoals();
-  }, [refreshTrigger]);
+  }, [refreshTrigger, isAuthenticated, isLoading]);
 
   const fetchGoals = async () => {
     try {
-      setLoading(true);
-      const data = await fetchMyGoals();
-
+      setLoadingGoals(true);
+      const data = await getMyGoals();
       setGoals(data);
-    } catch (error) {
-      console.error("Failed to fetch goals", error);
+    } catch (err) {
+      console.error("Failed to fetch goals", err);
     } finally {
-      setLoading(false);
+      setLoadingGoals(false);
     }
   };
 
-  if (loading) {
+  if (loadingGoals) {
     return <p className="text-gray-500">Loading goals...</p>;
   }
 
   if (goals.length === 0) {
-    return <p className="text-gray-500 italic">No goals found. Create one!</p>;
+    return (
+      <div className="text-center py-10 bg-gray-50 rounded border border-dashed border-gray-300">
+        <p className="text-gray-600 text-lg font-medium">
+          You haven't created any goals yet.
+        </p>
+        <p className="text-gray-400 text-sm mt-1">
+          Use the form on the left to start your journey 🚀
+        </p>
+      </div>
+    );
   }
 
   return (
     <div className="space-y-4">
-      {goals.map((goal) => (
+      {goals.map(goal => (
         <div
           key={goal.id}
-          className="p-4 border rounded shadow bg-white"
+          className="p-4 bg-white border rounded shadow flex justify-between"
         >
-          <h3 className="font-bold text-lg">{goal.category}</h3>
+          <div>
+            <h3 className="font-bold">{goal.category}</h3>
+            <p className="text-sm text-gray-600">
+              {goal.difficulty} • {goal.dailyMinimumEffort} min/day
+            </p>
+            <p className="text-xs text-gray-500">
+              {goal.startDate} → {goal.endDate}
+            </p>
+            <span className="text-xs font-semibold">
+              Status: {goal.status}
+            </span>
+          </div>
 
-          <p className="text-sm text-gray-600">
-            {goal.difficulty} • {goal.dailyMinimumEffort} mins/day
-          </p>
-
-          <p className="text-xs text-gray-500">
-            {goal.startDate} → {goal.endDate}
-          </p>
-
-          <span className="inline-block mt-2 text-xs font-semibold px-2 py-1 rounded bg-blue-100 text-blue-800">
-            {goal.status}
-          </span>
+          {goal.status === "ACTIVE" && (
+            <div className="flex flex-col gap-2">
+              <button
+                onClick={() => completeGoal(goal.id)}
+                className="bg-green-500 text-white text-xs px-3 py-1 rounded"
+              >
+                Complete
+              </button>
+              <button
+                onClick={() => deactivateGoal(goal.id)}
+                className="bg-gray-400 text-white text-xs px-3 py-1 rounded"
+              >
+                Archive
+              </button>
+            </div>
+          )}
         </div>
       ))}
     </div>
