@@ -29,9 +29,16 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [token, setToken] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  // 🔄 Restore session
+  // 🔄 Restore session (FIXED)
   useEffect(() => {
     const restore = async () => {
+      // ✅ DO NOT refresh if no auth header exists
+      const authHeader = api.defaults.headers.common.Authorization;
+      if (!authHeader) {
+        setIsLoading(false);
+        return;
+      }
+
       try {
         const res = await api.post<AuthResponse>('/auth/refresh');
         setToken(res.data.accessToken);
@@ -41,10 +48,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       } catch {
         setUser(null);
         setToken(null);
+        delete api.defaults.headers.common.Authorization;
       } finally {
         setIsLoading(false);
       }
     };
+
     restore();
   }, []);
 
@@ -65,35 +74,27 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     await api.post('/auth/register', { email, password });
   };
 
-  // 🔥 FIXED LOGOUT
+  // 🔥 Logout (already correct)
   const logout = async () => {
-    // 🔥 STEP 1: REMOVE ACCESS TOKEN IMMEDIATELY
     delete api.defaults.headers.common.Authorization;
 
     try {
-      // 🔥 STEP 2: CALL LOGOUT WITH NO AUTH HEADER
       await api.post(
         '/auth/logout',
         {},
         {
           withCredentials: true,
-          headers: {
-            Authorization: '', // 👈 FORCE EMPTY HEADER
-          },
+          headers: { Authorization: '' },
         }
       );
-    } catch (error) {
-      console.log(
-        'Logout backend call failed (likely token expired), clearing UI anyway.'
-      );
+    } catch {
+      // ignore – backend token may already be invalid
     } finally {
-      // 🔥 STEP 3: ALWAYS CLEAR UI STATE
       setUser(null);
       setToken(null);
       delete api.defaults.headers.common.Authorization;
     }
   };
-
 
   return (
     <AuthContext.Provider
